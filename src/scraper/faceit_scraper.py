@@ -14,8 +14,8 @@ API_KEY = os.environ.get("FACEIT_API_KEY", "")
 BASE_URL = "https://open.faceit.com/data/v4"
 TARGET = 1500
 POLL_INTERVAL = 10
-OUTPUT_CSV = "faceit_matches.csv"
-PROGRESS_FILE = "progress.json"
+OUTPUT_CSV = "data/faceit_matches.csv"
+PROGRESS_FILE = "data/progress.json"
 
 SEED_PLAYERS = [
     "s1mple", "NiKo", "ZywOo", "donk", "m0NESY",
