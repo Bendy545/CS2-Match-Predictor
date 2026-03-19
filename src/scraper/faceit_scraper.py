@@ -12,7 +12,7 @@ load_dotenv()
 
 API_KEY = os.environ.get("FACEIT_API_KEY", "")
 BASE_URL = "https://open.faceit.com/data/v4"
-TARGET = 1500
+TARGET = 6000
 POLL_INTERVAL = 10
 OUTPUT_CSV = "data/faceit_matches.csv"
 PROGRESS_FILE = "data/progress.json"
