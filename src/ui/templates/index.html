@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CS2 Match Predictor</title>
+    <link href="static/style.css" rel="stylesheet">
+</head>
+<body>
+
+<h1>CS2 Match Predictor</h1>
+
+<div class="tabs">
+    <button class="active" onclick="switchTab('room')">Room URL</button>
+    <button onclick="switchTab('manual')">Manual Input</button>
+</div>
+
+<div id="room-tab">
+    <label>FACEIT Room URL or Match ID</label>
+    <input type="text" id="room-url" placeholder="https://www.faceit.com/en/cs2/room/1-abc123... or just 1-abc123...">
+    <button onclick="predictRoom()">Predict from Room</button>
+</div>
+
+<div id="manual-tab" class="hidden">
+    <label>Map</label>
+    <select id="map">
+        <option value="de_dust2">Dust 2</option>
+        <option value="de_mirage">Mirage</option>
+        <option value="de_inferno">Inferno</option>
+        <option value="de_nuke">Nuke</option>
+        <option value="de_anubis">Anubis</option>
+        <option value="de_ancient">Ancient</option>
+        <option value="de_vertigo">Vertigo</option>
+        <option value="de_train">Train</option>
+    </select>
+
+    <div class="row">
+        <div class="col">
+            <h2>Team 1</h2>
+            <input type="text" id="t1p1" placeholder="Player 1">
+            <input type="text" id="t1p2" placeholder="Player 2">
+            <input type="text" id="t1p3" placeholder="Player 3">
+            <input type="text" id="t1p4" placeholder="Player 4">
+            <input type="text" id="t1p5" placeholder="Player 5">
+        </div>
+        <div class="col">
+            <h2>Team 2</h2>
+            <input type="text" id="t2p1" placeholder="Player 1">
+            <input type="text" id="t2p2" placeholder="Player 2">
+            <input type="text" id="t2p3" placeholder="Player 3">
+            <input type="text" id="t2p4" placeholder="Player 4">
+            <input type="text" id="t2p5" placeholder="Player 5">
+        </div>
+    </div>
+    <button onclick="predictManual()">Predict Match</button>
+</div>
+
+<div id="error" class="error"></div>
+
+<div id="results" class="hidden">
+    <div class="result">
+        <h3 id="winner-text"></h3>
+        <p id="score-text"></p>
+
+        <hr>
+
+        <div class="stats">
+            <div>
+                <span class="label" id="t1-label">Team 1</span>
+                <span class="value" id="t1-elo"></span>
+                <span class="label">Avg ELO</span>
+                <span id="t1-kd"></span>
+                <span class="label">K/D</span>
+                <span id="t1-wr"></span>
+                <span class="label">Win Rate</span>
+            </div>
+            <div>
+                <span class="label" id="t2-label">Team 2</span>
+                <span class="value" id="t2-elo"></span>
+                <span class="label">Avg ELO</span>
+                <span id="t2-kd"></span>
+                <span class="label">K/D</span>
+                <span id="t2-wr"></span>
+                <span class="label">Win Rate</span>
+            </div>
+        </div>
+
+        <hr>
+        <p id="players-info" style="font-size:12px; color:#888;"></p>
+    </div>
+</div>
+
+<script src="static/app.js"></script>
+
+</body>
+</html>
