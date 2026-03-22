@@ -18,23 +18,15 @@ API_KEY = os.environ.get("FACEIT_API_KEY", "")
 BASE_URL = "https://open.faceit.com/data/v4"
 
 try:
-    import tensorflow as tf
-    nn_classifier = tf.keras.models.load_model(os.path.join(MODELS_DIR, "nn_classifier.keras"))
-    print("Neural network classifier loaded")
+    with open(os.path.join(MODELS_DIR, "gb_classifier-5.pkl"), "rb") as f:
+        gb_classifier = pickle.load(f)
+    print("Gradient Boosting classifier loaded")
 except Exception as e:
-    nn_classifier = None
-    print(f"Warning: Could not load neural network classifier: {e}")
+    gb_classifier = None
+    print(f"Warning: Could not load GB Classifier: {e}")
 
 try:
-    with open(os.path.join(MODELS_DIR, "nn_preprocessor.pkl"), "rb") as f:
-        preprocessor = pickle.load(f)
-    print("Preprocessor loaded")
-except Exception as e:
-    preprocessor = None
-    print(f"Warning: Could not load preprocessor: {e}")
-
-try:
-    with open(os.path.join(MODELS_DIR, "rf_regressor.pkl"), "rb") as f:
+    with open(os.path.join(MODELS_DIR, "rf_regressor-4.pkl"), "rb") as f:
         rf_regressor = pickle.load(f)
     print("Random Forest regressor loaded")
 except Exception as e:
@@ -162,37 +154,17 @@ def team_averages(players_data):
     }
 
 def build_features(t1, t2, map_name):
+    exp_ratio = t1["avg_matches"] / max(t2["avg_matches"], 1)
+    exp_ratio = min(exp_ratio, 5)
+
     row = {
-        "t1_avg_elo": t1["avg_elo"],
-        "t1_elo_std": t1["elo_std"],
-        "t1_min_elo": t1["min_elo"],
-        "t1_max_elo": t1["max_elo"],
-        "t1_avg_kd": t1["avg_kd"],
-        "t1_avg_hs_pct": t1["avg_hs_pct"],
-        "t1_avg_win_rate": t1["avg_win_rate"],
-        "t1_avg_matches": t1["avg_matches"],
-        "t1_avg_level": t1["avg_level"],
-        "t2_avg_elo": t2["avg_elo"],
-        "t2_elo_std": t2["elo_std"],
-        "t2_min_elo": t2["min_elo"],
-        "t2_max_elo": t2["max_elo"],
-        "t2_avg_kd": t2["avg_kd"],
-        "t2_avg_hs_pct": t2["avg_hs_pct"],
-        "t2_avg_win_rate": t2["avg_win_rate"],
-        "t2_avg_matches": t2["avg_matches"],
-        "t2_avg_level": t2["avg_level"],
         "elo_diff": t1["avg_elo"] - t2["avg_elo"],
         "kd_diff": t1["avg_kd"] - t2["avg_kd"],
         "wr_diff": t1["avg_win_rate"] - t2["avg_win_rate"],
-        "elo_ratio": t1["avg_elo"] / max(t2["avg_elo"], 1),
-        "kd_ratio": t1["avg_kd"] / max(t2["avg_kd"], 0.01),
-        "experience_ratio": t1["avg_matches"] / max(t2["avg_matches"], 1),
-        "elo_total": t1["avg_elo"] + t2["avg_elo"],
-        "elo_spread_diff": t1["elo_std"] - t2["elo_std"],
         "hs_diff": t1["avg_hs_pct"] - t2["avg_hs_pct"],
         "level_diff": t1["avg_level"] - t2["avg_level"],
-        "t1_consistency": 1 / (1 + t1["elo_std"]),
-        "t2_consistency": 1 / (1 + t2["elo_std"]),
+        "elo_total": t1["avg_elo"] + t2["avg_elo"],
+        "experience_ratio": exp_ratio,
         "map": map_name,
     }
     return pd.DataFrame([row])
@@ -204,9 +176,8 @@ def run_prediction(t1_players, t2_players, map_name):
     features = build_features(t1, t2, map_name)
 
     win_prob = 0.5
-    if nn_classifier and preprocessor:
-        X_processed = preprocessor.transform(features)
-        win_prob = float(nn_classifier.predict(X_processed).flatten()[0])
+    if gb_classifier:
+        win_prob = float(gb_classifier.predict_proba(features)[0][1])
 
     score_diff = 0.0
     if rf_regressor:
