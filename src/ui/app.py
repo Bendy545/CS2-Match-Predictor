@@ -18,7 +18,7 @@ API_KEY = os.environ.get("FACEIT_API_KEY", "")
 BASE_URL = "https://open.faceit.com/data/v4"
 
 try:
-    with open(os.path.join(MODELS_DIR, "gb_classifier-5.pkl"), "rb") as f:
+    with open(os.path.join(MODELS_DIR, "calibrated_gb.pkl"), "rb") as f:
         gb_classifier = pickle.load(f)
     print("Gradient Boosting classifier loaded")
 except Exception as e:
