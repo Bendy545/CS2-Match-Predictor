@@ -1,7 +1,8 @@
 body {
     font-family: Arial, sans-serif;
     background: #1a1a2e;
-    color: #eee; max-width:800px;
+    color: #eee;
+    max-width:800px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -14,11 +15,13 @@ h2 {
     margin-top: 30px;
 }
 label {
-    display: block; margin-top: 10px;
+    display: block;
+    margin-top: 10px;
     color: #aaa;
 }
 input, select {
-    width: 100%; padding: 8px;
+    width: 100%;
+    padding: 8px;
     margin-top: 4px;
     background: #16213e;
     border: 1px solid #333;
@@ -109,4 +112,78 @@ hr {
 }
 .hidden {
     display: none;
+}
+
+.section-title {
+    color: #ff6b00;
+    font-size: 16px;
+    margin-bottom: 4px;
+}
+.section-subtitle {
+    color: #888;
+    font-size: 12px;
+    margin-top: 0;
+}
+.player-predictions {
+    display: flex;
+    gap: 20px;
+}
+.player-team {
+    flex: 1;
+}
+.player-team h4 {
+    color: #aaa;
+    font-size: 13px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.player-card {
+    background: #0f3460;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 3px solid #555;
+}
+.player-card.overperform {
+    border-left-color: #22c55e;
+}
+.player-card.underperform {
+    border-left-color: #ef4444;
+}
+.player-info {
+    display: flex;
+    flex-direction: column;
+}
+.player-name {
+    font-weight: bold;
+    font-size: 14px;
+}
+.player-stats-small {
+    color: #888;
+    font-size: 11px;
+    margin-top: 2px;
+}
+.player-prediction {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+.prediction-arrow {
+    font-size: 18px;
+    font-weight: bold;
+}
+.prediction-arrow.up {
+    color: #22c55e;
+}
+.prediction-arrow.down {
+    color: #ef4444;
+}
+.prediction-prob {
+    font-size: 11px;
+    color: #aaa;
 }
