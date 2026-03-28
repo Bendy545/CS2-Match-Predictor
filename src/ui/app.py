@@ -33,6 +33,14 @@ except Exception as e:
     rf_regressor = None
     print(f"Warning: Could not load Random Forest regressor: {e}")
 
+try:
+    with open(os.path.join(MODELS_DIR, "overperform_classifier.pkl"), "rb") as f:
+        overperform_model = pickle.load(f)
+    print("Overperformance classifier loaded")
+except Exception as e:
+    overperform_model = None
+    print(f"Warning: Could not load overperformance model: {e}")
+
 session = requests.Session()
 session.headers.update({
     "Authorization": f"Bearer {API_KEY}",
@@ -74,6 +82,13 @@ def search_player(nickname):
         return data["items"][0]["player_id"]
     return None
 
+def recent_form(results):
+    if not results:
+        return 0.5
+    wins = sum(1 for r in results[:5] if str(r) == "1")
+    return wins / min(len(results), 5)
+
+
 def get_player_info(player_id):
     profile = api_get(f"/players/{player_id}")
     stats = api_get(f"/players/{player_id}/stats/cs2")
@@ -86,13 +101,15 @@ def get_player_info(player_id):
         level = to_float(cs2.get("skill_level", 0))
         nickname = profile.get("nickname", "Unknown")
 
-    kd, hs, wr, matches = 1.0, 45.0, 50.0, 0
+    kd, hs, wr, matches, form = 1.0, 45.0, 50.0, 0, 0.5
     if stats and stats.get("lifetime"):
         lt = stats["lifetime"]
         kd = to_float(lt.get("Average K/D Ratio", 1.0))
         hs = to_float(lt.get("Average Headshots %", 45.0))
         wr = to_float(lt.get("Win Rate %", 50.0))
         matches = to_float(lt.get("Matches", 0))
+        recent = lt.get("Recent Results", [])
+        form = recent_form(recent)
 
     return {
         "nickname": nickname,
@@ -102,11 +119,10 @@ def get_player_info(player_id):
         "hs_pct": hs,
         "win_rate": wr,
         "matches": matches,
+        "form": form,
     }
 
-
 def get_match_info(match_id):
-    """Fetch match details including both team rosters and map."""
     data = api_get(f"/matches/{match_id}")
     if not data:
         return None
@@ -139,6 +155,7 @@ def get_match_info(match_id):
         "status": data.get("status", ""),
     }
 
+
 def team_averages(players_data):
     elos = [p["elo"] for p in players_data]
     return {
@@ -151,6 +168,7 @@ def team_averages(players_data):
         "avg_win_rate": statistics.mean([p["win_rate"] for p in players_data]),
         "avg_matches": statistics.mean([p["matches"] for p in players_data]),
         "avg_level": statistics.mean([p["level"] for p in players_data]),
+        "avg_form": statistics.mean([p["form"] for p in players_data]),
     }
 
 def build_features(t1, t2, map_name):
@@ -169,6 +187,69 @@ def build_features(t1, t2, map_name):
     }
     return pd.DataFrame([row])
 
+def build_player_features(player, team_stats, opp_stats, map_name):
+    elo_gap = player["elo"] - opp_stats["avg_elo"]
+
+    row = {
+        "player_elo": player["elo"],
+        "player_kd": player["kd"],
+        "player_hs_pct": player["hs_pct"],
+        "player_wr": player["win_rate"],
+        "player_matches": player["matches"],
+        "player_level": player["level"],
+        "team_avg_elo": team_stats["avg_elo"],
+        "team_avg_kd": team_stats["avg_kd"],
+        "opp_avg_elo": opp_stats["avg_elo"],
+        "opp_avg_kd": opp_stats["avg_kd"],
+        "opp_avg_wr": opp_stats["avg_win_rate"],
+        "elo_gap": elo_gap,
+        "elo_advantage_ratio": player["elo"] / max(opp_stats["avg_elo"], 1),
+        "carry_factor": player["elo"] / max(team_stats["avg_elo"], 1),
+        "elo_gap_abs": abs(elo_gap),
+        "team_kd_support": team_stats["avg_kd"] - player["kd"],
+        "opp_kd_challenge": opp_stats["avg_kd"] / max(player["kd"], 0.1),
+        "is_experienced": 1 if player["matches"] > 500 else 0,
+        "wr_advantage": player["win_rate"] - opp_stats["avg_win_rate"],
+        "team_form": team_stats["avg_form"],
+        "opp_form": opp_stats["avg_form"],
+        "form_advantage": team_stats["avg_form"] - opp_stats["avg_form"],
+        "map": map_name,
+    }
+    return row
+
+def predict_player_performance(t1_players, t2_players, t1_stats, t2_stats, map_name):
+    if not overperform_model:
+        return None, None
+
+    t1_predictions = []
+    for player in t1_players:
+        features = build_player_features(player, t1_stats, t2_stats, map_name)
+        df = pd.DataFrame([features])
+        prob = float(overperform_model.predict_proba(df)[0][1])
+        t1_predictions.append({
+            "nickname": player["nickname"],
+            "elo": round(player["elo"]),
+            "kd": player["kd"],
+            "form": round(player["form"] * 100),
+            "overperform_prob": round(prob * 100, 1),
+            "prediction": "overperform" if prob >= 0.5 else "underperform",
+        })
+
+    t2_predictions = []
+    for player in t2_players:
+        features = build_player_features(player, t2_stats, t1_stats, map_name)
+        df = pd.DataFrame([features])
+        prob = float(overperform_model.predict_proba(df)[0][1])
+        t2_predictions.append({
+            "nickname": player["nickname"],
+            "elo": round(player["elo"]),
+            "kd": player["kd"],
+            "form": round(player["form"] * 100),
+            "overperform_prob": round(prob * 100, 1),
+            "prediction": "overperform" if prob >= 0.5 else "underperform",
+        })
+
+    return t1_predictions, t2_predictions
 
 def run_prediction(t1_players, t2_players, map_name):
     t1 = team_averages(t1_players)
@@ -195,6 +276,8 @@ def run_prediction(t1_players, t2_players, map_name):
         est_t1 = base_loser
         est_t2 = base_winner
 
+    t1_player_preds, t2_player_preds = predict_player_performance(t1_players, t2_players, t1, t2, map_name)
+
     return {
         "winner": winner,
         "win_probability": round(win_prob * 100, 1),
@@ -214,6 +297,10 @@ def run_prediction(t1_players, t2_players, map_name):
             "avg_wr": round(t2["avg_win_rate"], 1),
         },
         "map": map_name,
+        "player_predictions": {
+            "team1": t1_player_preds,
+            "team2": t2_player_preds,
+        },
     }
 
 @app.route("/")
